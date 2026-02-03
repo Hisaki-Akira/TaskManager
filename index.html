@@ -41,21 +41,52 @@
   <script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
 
+  <!-- Firebase SDK v9+ (modular) -->
   <script type="module">
+    // Firebase imports
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js';
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js';
+    import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, setDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js';
+
     const { useState, useEffect } = React;
     const { createRoot } = ReactDOM;
 
-    // Types are implicit in JavaScript
-    
-    // Mock Data
-    const users = [
-      { id: '1', name: '田中', color: '#3b82f6' },
-      { id: '2', name: '佐藤', color: '#10b981' },
-      { id: '3', name: '鈴木', color: '#f59e0b' },
-      { id: '4', name: '高橋', color: '#ef4444' }
-    ];
+    // Firebase Configuration (placeholder values)
+    const firebaseConfig = {
+      apiKey: "YOUR_FIREBASE_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+      appId: "YOUR_FIREBASE_APP_ID"
+    };
 
-    const today = new Date();
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // Firebase Auth Error Messages (Japanese)
+    const getAuthErrorMessage = (errorCode) => {
+      const messages = {
+        'auth/email-already-in-use': 'このメールアドレスは既に使用されています',
+        'auth/invalid-email': 'メールアドレスの形式が正しくありません',
+        'auth/operation-not-allowed': 'この操作は許可されていません',
+        'auth/weak-password': 'パスワードは6文字以上で設定してください',
+        'auth/user-disabled': 'このアカウントは無効化されています',
+        'auth/user-not-found': 'メールアドレスまたはパスワードが正しくありません',
+        'auth/wrong-password': 'メールアドレスまたはパスワードが正しくありません',
+        'auth/network-request-failed': 'ネットワークエラーが発生しました',
+        'auth/too-many-requests': 'リクエストが多すぎます。しばらく待ってから再試行してください'
+      };
+      return messages[errorCode] || 'エラーが発生しました';
+    };
+
+    // User color palette
+    const userColors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+    const getRandomColor = () => userColors[Math.floor(Math.random() * userColors.length)];
+
+    // Utility Functions
     const formatDateStr = (date) => {
       return date.toISOString().split('T')[0];
     };
@@ -65,73 +96,6 @@
       result.setDate(result.getDate() + days);
       return result;
     };
-
-    const initialTasks = [
-      {
-        id: '1',
-        title: 'プロジェクトA設計',
-        userId: '1',
-        startDate: formatDateStr(addDays(today, -2)),
-        endDate: formatDateStr(addDays(today, 5)),
-        color: '#3b82f6'
-      },
-      {
-        id: '2',
-        title: 'レビュー対応',
-        userId: '1',
-        startDate: formatDateStr(addDays(today, 6)),
-        endDate: formatDateStr(addDays(today, 8)),
-        color: '#3b82f6'
-      },
-      {
-        id: '3',
-        title: 'バグ修正',
-        userId: '2',
-        startDate: formatDateStr(addDays(today, 0)),
-        endDate: formatDateStr(addDays(today, 3)),
-        color: '#10b981'
-      },
-      {
-        id: '4',
-        title: 'テスト実施',
-        userId: '2',
-        startDate: formatDateStr(addDays(today, 1)),
-        endDate: formatDateStr(addDays(today, 6)),
-        color: '#10b981'
-      },
-      {
-        id: '5',
-        title: 'ドキュメント作成',
-        userId: '2',
-        startDate: formatDateStr(addDays(today, 4)),
-        endDate: formatDateStr(addDays(today, 7)),
-        color: '#10b981'
-      },
-      {
-        id: '6',
-        title: '要件定義',
-        userId: '3',
-        startDate: formatDateStr(addDays(today, 10)),
-        endDate: formatDateStr(addDays(today, 12)),
-        color: '#f59e0b'
-      },
-      {
-        id: '7',
-        title: 'プロジェクトB実装',
-        userId: '4',
-        startDate: formatDateStr(addDays(today, -3)),
-        endDate: formatDateStr(addDays(today, 4)),
-        color: '#ef4444'
-      },
-      {
-        id: '8',
-        title: 'プロジェクトC実装',
-        userId: '4',
-        startDate: formatDateStr(addDays(today, 5)),
-        endDate: formatDateStr(addDays(today, 11)),
-        color: '#ef4444'
-      }
-    ];
 
     // Utility Functions
     const getDateRange = (startDate, days) => {
@@ -491,6 +455,202 @@
       ]);
     };
 
+    // Login Component
+    const LoginScreen = ({ onLogin }) => {
+      const [isSignup, setIsSignup] = useState(false);
+      const [email, setEmail] = useState('');
+      const [password, setPassword] = useState('');
+      const [error, setError] = useState('');
+      const [loading, setLoading] = useState(false);
+
+      const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError('');
+        setLoading(true);
+
+        try {
+          if (isSignup) {
+            // Sign up
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            const user = userCredential.user;
+            
+            // Create user document in Firestore
+            const displayName = email.split('@')[0];
+            const color = getRandomColor();
+            await setDoc(doc(db, 'users', user.uid), {
+              userId: user.uid,
+              email: user.email,
+              displayName: displayName,
+              color: color,
+              createdAt: serverTimestamp()
+            });
+          } else {
+            // Sign in
+            await signInWithEmailAndPassword(auth, email, password);
+          }
+        } catch (err) {
+          setError(getAuthErrorMessage(err.code));
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      return React.createElement('div', {
+        style: {
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#f3f4f6',
+          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+        }
+      }, 
+        React.createElement('div', {
+          style: {
+            backgroundColor: 'white',
+            padding: '40px',
+            borderRadius: '8px',
+            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+            width: '400px',
+            maxWidth: '90%'
+          }
+        }, [
+          React.createElement('h1', {
+            key: 'title',
+            style: {
+              fontSize: '24px',
+              fontWeight: 'bold',
+              marginBottom: '8px',
+              textAlign: 'center',
+              color: '#111827'
+            }
+          }, 'リソーススケジューラー'),
+          React.createElement('p', {
+            key: 'subtitle',
+            style: {
+              fontSize: '14px',
+              color: '#6b7280',
+              textAlign: 'center',
+              marginBottom: '24px'
+            }
+          }, isSignup ? 'アカウントを作成' : 'ログイン'),
+          React.createElement('form', {
+            key: 'form',
+            onSubmit: handleSubmit
+          }, [
+            React.createElement('div', {
+              key: 'email-field',
+              style: { marginBottom: '16px' }
+            }, [
+              React.createElement('label', {
+                key: 'label',
+                style: {
+                  display: 'block',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  marginBottom: '4px',
+                  color: '#374151'
+                }
+              }, 'メールアドレス'),
+              React.createElement('input', {
+                key: 'input',
+                type: 'email',
+                value: email,
+                onChange: (e) => setEmail(e.target.value),
+                required: true,
+                disabled: loading,
+                style: {
+                  width: '100%',
+                  padding: '8px 12px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '4px',
+                  fontSize: '14px'
+                }
+              })
+            ]),
+            React.createElement('div', {
+              key: 'password-field',
+              style: { marginBottom: '20px' }
+            }, [
+              React.createElement('label', {
+                key: 'label',
+                style: {
+                  display: 'block',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  marginBottom: '4px',
+                  color: '#374151'
+                }
+              }, 'パスワード'),
+              React.createElement('input', {
+                key: 'input',
+                type: 'password',
+                value: password,
+                onChange: (e) => setPassword(e.target.value),
+                required: true,
+                disabled: loading,
+                minLength: 6,
+                style: {
+                  width: '100%',
+                  padding: '8px 12px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '4px',
+                  fontSize: '14px'
+                }
+              })
+            ]),
+            error && React.createElement('div', {
+              key: 'error',
+              style: {
+                padding: '8px 12px',
+                backgroundColor: '#fee2e2',
+                color: '#991b1b',
+                borderRadius: '4px',
+                fontSize: '14px',
+                marginBottom: '16px'
+              }
+            }, error),
+            React.createElement('button', {
+              key: 'submit',
+              type: 'submit',
+              disabled: loading,
+              style: {
+                width: '100%',
+                padding: '10px',
+                borderRadius: '4px',
+                border: 'none',
+                backgroundColor: loading ? '#9ca3af' : '#3b82f6',
+                color: 'white',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                marginBottom: '12px'
+              }
+            }, loading ? '処理中...' : (isSignup ? 'サインアップ' : 'ログイン')),
+            React.createElement('button', {
+              key: 'toggle',
+              type: 'button',
+              onClick: () => {
+                setIsSignup(!isSignup);
+                setError('');
+              },
+              disabled: loading,
+              style: {
+                width: '100%',
+                padding: '8px',
+                borderRadius: '4px',
+                border: '1px solid #d1d5db',
+                backgroundColor: 'white',
+                color: '#374151',
+                fontSize: '14px',
+                cursor: loading ? 'not-allowed' : 'pointer'
+              }
+            }, isSignup ? 'ログインに切り替え' : 'サインアップに切り替え')
+          ])
+        ])
+      );
+    };
+
     const AddTaskModal = ({ isOpen, onClose, onAdd, users, prefillUserId, prefillDate }) => {
       const [title, setTitle] = useState('');
       const [userId, setUserId] = useState('');
@@ -700,12 +860,118 @@
 
     // Main App
     const App = () => {
-      const [tasks, setTasks] = useState(initialTasks);
+      const [currentUser, setCurrentUser] = useState(null);
+      const [authLoading, setAuthLoading] = useState(true);
+      const [users, setUsers] = useState([]);
+      const [tasks, setTasks] = useState([]);
       const [viewMode, setViewMode] = useState('week');
       const [isModalOpen, setIsModalOpen] = useState(false);
       const [prefillUserId, setPrefillUserId] = useState(undefined);
       const [prefillDate, setPrefillDate] = useState(undefined);
       const [selectedTask, setSelectedTask] = useState(null);
+
+      // Authentication state listener
+      useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+          setCurrentUser(user);
+          setAuthLoading(false);
+        });
+        return () => unsubscribe();
+      }, []);
+
+      // Firestore listeners
+      useEffect(() => {
+        if (!currentUser) return;
+
+        // Listen to users collection
+        const usersQuery = query(collection(db, 'users'));
+        const unsubscribeUsers = onSnapshot(usersQuery, (snapshot) => {
+          const usersData = snapshot.docs.map(doc => ({
+            id: doc.data().userId,
+            name: doc.data().displayName,
+            color: doc.data().color,
+            email: doc.data().email
+          }));
+          setUsers(usersData);
+        }, (error) => {
+          console.error('Users listener error:', error);
+        });
+
+        // Listen to tasks collection
+        const tasksQuery = query(collection(db, 'tasks'));
+        const unsubscribeTasks = onSnapshot(tasksQuery, (snapshot) => {
+          const tasksData = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+          setTasks(tasksData);
+        }, (error) => {
+          console.error('Tasks listener error:', error);
+        });
+
+        return () => {
+          unsubscribeUsers();
+          unsubscribeTasks();
+        };
+      }, [currentUser]);
+
+      const handleLogout = async () => {
+        try {
+          await signOut(auth);
+        } catch (error) {
+          console.error('Logout error:', error);
+        }
+      };
+
+      const handleAddTask = async (newTask) => {
+        if (!currentUser) return;
+        
+        try {
+          const user = users.find(u => u.id === newTask.userId);
+          await addDoc(collection(db, 'tasks'), {
+            title: newTask.title,
+            assignedTo: newTask.userId,
+            createdBy: currentUser.uid,
+            startDate: newTask.startDate,
+            endDate: newTask.endDate,
+            color: user?.color || '#3b82f6',
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+          });
+        } catch (error) {
+          console.error('Add task error:', error);
+          alert('タスクの追加に失敗しました: ' + error.message);
+        }
+      };
+
+      const handleDeleteTask = async () => {
+        if (!selectedTask || !currentUser) return;
+        
+        try {
+          await deleteDoc(doc(db, 'tasks', selectedTask.id));
+          setSelectedTask(null);
+        } catch (error) {
+          console.error('Delete task error:', error);
+          alert('タスクの削除に失敗しました: ' + error.message);
+        }
+      };
+
+      // Show login screen if not authenticated
+      if (authLoading) {
+        return React.createElement('div', {
+          style: {
+            minHeight: '100vh',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+          }
+        }, React.createElement('div', { style: { fontSize: '18px', color: '#6b7280' } }, '読み込み中...'));
+      }
+
+      if (!currentUser) {
+        return React.createElement(LoginScreen, { onLogin: setCurrentUser });
+      }
 
       const getViewDays = () => {
         switch (viewMode) {
@@ -723,11 +989,6 @@
       const dates = getDateRange(startDate, getViewDays());
       const dayWidth = 60;
 
-      const handleAddTask = (newTask) => {
-        const id = tasks.length === 0 ? '1' : (Math.max(...tasks.map(t => parseInt(t.id) || 0)) + 1).toString();
-        setTasks([...tasks, { ...newTask, id }]);
-      };
-
       const handleTaskClick = (task) => {
         setSelectedTask(task);
       };
@@ -738,18 +999,21 @@
         setIsModalOpen(true);
       };
 
-      const handleDeleteTask = () => {
-        if (selectedTask) {
-          setTasks(tasks.filter(t => t.id !== selectedTask.id));
-          setSelectedTask(null);
-        }
-      };
-
       const handleCloseTaskDetail = () => {
         setSelectedTask(null);
       };
 
       const endDate = dates[dates.length - 1];
+
+      // Transform Firestore tasks to match component format
+      const displayTasks = tasks.map(task => ({
+        id: task.id,
+        title: task.title,
+        userId: task.assignedTo,
+        startDate: task.startDate,
+        endDate: task.endDate,
+        color: task.color
+      }));
 
       return React.createElement('div', {
         style: {
@@ -780,6 +1044,37 @@
             key: 'controls',
             style: { display: 'flex', gap: '12px', alignItems: 'center' }
           }, [
+            React.createElement('div', {
+              key: 'user-info',
+              style: {
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '6px 12px',
+                backgroundColor: '#1f2937',
+                borderRadius: '6px',
+                fontSize: '14px'
+              }
+            }, [
+              React.createElement('span', {
+                key: 'email',
+                style: { color: '#9ca3af' }
+              }, currentUser?.email),
+              React.createElement('button', {
+                key: 'logout',
+                onClick: handleLogout,
+                style: {
+                  padding: '4px 8px',
+                  borderRadius: '4px',
+                  border: 'none',
+                  backgroundColor: '#374151',
+                  color: 'white',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  fontWeight: '500'
+                }
+              }, 'ログアウト')
+            ]),
             React.createElement('div', {
               key: 'view-modes',
               style: { display: 'flex', gap: '4px', backgroundColor: '#1f2937', borderRadius: '6px', padding: '4px' }
@@ -841,11 +1136,11 @@
             dayWidth
           }),
           ...users.map(user => {
-            const workload = calculateWorkload(user.id, tasks, startDate, endDate);
+            const workload = calculateWorkload(user.id, displayTasks, startDate, endDate);
             return React.createElement(UserRow, {
               key: user.id,
               user,
-              tasks,
+              tasks: displayTasks,
               workload,
               dates,
               dayWidth,
