@@ -86,6 +86,20 @@
     const userColors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
     const getRandomColor = () => userColors[Math.floor(Math.random() * userColors.length)];
 
+    // Validation function for display name
+    const validateDisplayName = (name) => {
+      if (!name || name.trim().length === 0) {
+        return 'ユーザー名を入力してください';
+      }
+      if (name.trim().length < 2) {
+        return 'ユーザー名は2文字以上で入力してください';
+      }
+      if (name.trim().length > 20) {
+        return 'ユーザー名は20文字以内で入力してください';
+      }
+      return null; // OK
+    };
+
     // Utility Functions
     const formatDateStr = (date) => {
       return date.toISOString().split('T')[0];
@@ -459,6 +473,7 @@
     const LoginScreen = ({ onLogin }) => {
       const [isSignup, setIsSignup] = useState(false);
       const [email, setEmail] = useState('');
+      const [displayName, setDisplayName] = useState('');
       const [password, setPassword] = useState('');
       const [error, setError] = useState('');
       const [loading, setLoading] = useState(false);
@@ -470,17 +485,24 @@
 
         try {
           if (isSignup) {
+            // Validate displayName for signup
+            const validationError = validateDisplayName(displayName);
+            if (validationError) {
+              setError(validationError);
+              setLoading(false);
+              return;
+            }
+
             // Sign up
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
             
             // Create user document in Firestore
-            const displayName = email.split('@')[0];
             const color = getRandomColor();
             await setDoc(doc(db, 'users', user.uid), {
               userId: user.uid,
               email: user.email,
-              displayName: displayName,
+              displayName: displayName.trim(),
               color: color,
               createdAt: serverTimestamp()
             });
@@ -568,6 +590,37 @@
                 }
               })
             ]),
+            isSignup && React.createElement('div', {
+              key: 'displayname-field',
+              style: { marginBottom: '16px' }
+            }, [
+              React.createElement('label', {
+                key: 'label',
+                style: {
+                  display: 'block',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  marginBottom: '4px',
+                  color: '#374151'
+                }
+              }, 'ユーザー名'),
+              React.createElement('input', {
+                key: 'input',
+                type: 'text',
+                value: displayName,
+                onChange: (e) => setDisplayName(e.target.value),
+                placeholder: 'ユーザー名を入力',
+                required: true,
+                disabled: loading,
+                style: {
+                  width: '100%',
+                  padding: '8px 12px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '4px',
+                  fontSize: '14px'
+                }
+              })
+            ]),
             React.createElement('div', {
               key: 'password-field',
               style: { marginBottom: '20px' }
@@ -632,6 +685,7 @@
               type: 'button',
               onClick: () => {
                 setIsSignup(!isSignup);
+                setDisplayName('');
                 setError('');
               },
               disabled: loading,
