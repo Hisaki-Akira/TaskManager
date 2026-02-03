@@ -1,5 +1,5 @@
 import React from 'react';
-import { formatDate, isToday, isWeekend, getWeekday } from '../utils/dateUtils.ts';
+import { formatDate, isToday, isWeekend, getWeekday } from '../utils/dateUtils';
 
 interface TimelineHeaderProps {
   dates: Date[];

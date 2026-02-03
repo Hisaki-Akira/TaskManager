@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { User, Task } from '../types.ts';
-import { formatDate } from '../utils/dateUtils.ts';
+import { User, Task } from '../types';
+import { formatDate } from '../utils/dateUtils';
 
 interface AddTaskModalProps {
   isOpen: boolean;

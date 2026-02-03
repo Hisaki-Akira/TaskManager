@@ -21,11 +21,13 @@ export const formatDate = (date: Date, format: 'short' | 'long' = 'short'): stri
   return `${month}/${day}`;
 };
 
+const MS_PER_DAY = 1000 * 60 * 60 * 24;
+
 export const getDaysBetween = (start: string, end: string): number => {
   const startDate = new Date(start);
   const endDate = new Date(end);
   const diffTime = endDate.getTime() - startDate.getTime();
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+  return Math.ceil(diffTime / MS_PER_DAY) + 1;
 };
 
 export const isToday = (date: Date): boolean => {

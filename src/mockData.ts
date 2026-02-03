@@ -1,4 +1,4 @@
-import { User, Task } from './types.ts';
+import { User, Task } from './types';
 
 export const users: User[] = [
   { id: '1', name: '田中', color: '#3b82f6' },

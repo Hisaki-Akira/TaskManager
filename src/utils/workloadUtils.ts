@@ -1,5 +1,5 @@
-import { Task, UserWorkload } from '../types.ts';
-import { getDaysBetween } from './dateUtils.ts';
+import { Task, UserWorkload } from '../types';
+import { getDaysBetween } from './dateUtils';
 
 export const calculateWorkload = (
   userId: string,
@@ -55,6 +55,8 @@ export const detectOverlap = (tasks: Task[]): boolean => {
   return false;
 };
 
+const MS_PER_DAY = 1000 * 60 * 60 * 24;
+
 export const getTaskPosition = (
   task: Task,
   startDate: Date,
@@ -69,7 +71,7 @@ export const getTaskPosition = (
   const taskEndDate = new Date(task.endDate);
   const timelineStartDate = new Date(timelineStart);
   
-  const daysFromStart = Math.max(0, Math.floor((taskStartDate.getTime() - timelineStartDate.getTime()) / (1000 * 60 * 60 * 24)));
+  const daysFromStart = Math.max(0, Math.floor((taskStartDate.getTime() - timelineStartDate.getTime()) / MS_PER_DAY));
   const taskDuration = getDaysBetween(task.startDate, task.endDate);
   
   return {

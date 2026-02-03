@@ -1,7 +1,7 @@
 import React from 'react';
-import { User, Task, UserWorkload } from '../types.ts';
-import { TaskBlock } from './TaskBlock.tsx';
-import { getTaskPosition, detectOverlap } from '../utils/workloadUtils.ts';
+import { User, Task, UserWorkload } from '../types';
+import { TaskBlock } from './TaskBlock';
+import { getTaskPosition, detectOverlap } from '../utils/workloadUtils';
 
 interface UserRowProps {
   user: User;
@@ -113,10 +113,7 @@ export const UserRow: React.FC<UserRowProps> = ({
               minWidth: `${dayWidth}px`,
               borderRight: '1px solid #e5e7eb',
               cursor: 'pointer',
-              transition: 'background-color 0.2s',
-              ':hover': {
-                backgroundColor: '#f3f4f6'
-              }
+              transition: 'background-color 0.2s'
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.backgroundColor = '#f3f4f6';

@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { Task, ViewMode } from './types.ts';
-import { users as initialUsers, tasks as initialTasks } from './mockData.ts';
-import { TimelineHeader } from './components/TimelineHeader.tsx';
-import { UserRow } from './components/UserRow.tsx';
-import { AddTaskModal } from './components/AddTaskModal.tsx';
-import { getDateRange, formatDate } from './utils/dateUtils.ts';
-import { calculateWorkload } from './utils/workloadUtils.ts';
+import { Task, ViewMode } from './types';
+import { users as initialUsers, tasks as initialTasks } from './mockData';
+import { TimelineHeader } from './components/TimelineHeader';
+import { UserRow } from './components/UserRow';
+import { AddTaskModal } from './components/AddTaskModal';
+import { getDateRange, formatDate } from './utils/dateUtils';
+import { calculateWorkload } from './utils/workloadUtils';
 
 const App: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
