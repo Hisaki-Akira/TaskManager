@@ -91,10 +91,10 @@
       if (!name || name.trim().length === 0) {
         return 'ユーザー名を入力してください';
       }
-      if (name.length < 2) {
+      if (name.trim().length < 2) {
         return 'ユーザー名は2文字以上で入力してください';
       }
-      if (name.length > 20) {
+      if (name.trim().length > 20) {
         return 'ユーザー名は20文字以内で入力してください';
       }
       return null; // OK
@@ -612,8 +612,6 @@
                 placeholder: 'ユーザー名を入力',
                 required: true,
                 disabled: loading,
-                minLength: 2,
-                maxLength: 20,
                 style: {
                   width: '100%',
                   padding: '8px 12px',
