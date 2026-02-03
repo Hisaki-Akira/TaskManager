@@ -33,40 +33,947 @@
     ::-webkit-scrollbar-thumb:hover {
       background: #555;
     }
-
-    /* Loading indicator */
-    #loading {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      font-size: 18px;
-      color: #6b7280;
-    }
   </style>
 </head>
 <body>
-  <div id="root">
-    <div id="loading">読み込み中...</div>
-  </div>
+  <div id="root"></div>
 
-  <script type="importmap">
-    {
-      "imports": {
-        "react": "https://esm.sh/react@18.2.0",
-        "react-dom": "https://esm.sh/react-dom@18.2.0",
-        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client"
-      }
-    }
-  </script>
+  <script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
 
   <script type="module">
-    import React from 'react';
-    import ReactDOM from 'react-dom/client';
-    import App from './src/App.tsx';
+    const { useState, useEffect } = React;
+    const { createRoot } = ReactDOM;
 
-    const root = ReactDOM.createRoot(document.getElementById('root'));
+    // Types are implicit in JavaScript
+    
+    // Mock Data
+    const users = [
+      { id: '1', name: '田中', color: '#3b82f6' },
+      { id: '2', name: '佐藤', color: '#10b981' },
+      { id: '3', name: '鈴木', color: '#f59e0b' },
+      { id: '4', name: '高橋', color: '#ef4444' }
+    ];
+
+    const today = new Date();
+    const formatDateStr = (date) => {
+      return date.toISOString().split('T')[0];
+    };
+
+    const addDays = (date, days) => {
+      const result = new Date(date);
+      result.setDate(result.getDate() + days);
+      return result;
+    };
+
+    const initialTasks = [
+      {
+        id: '1',
+        title: 'プロジェクトA設計',
+        userId: '1',
+        startDate: formatDateStr(addDays(today, -2)),
+        endDate: formatDateStr(addDays(today, 5)),
+        color: '#3b82f6'
+      },
+      {
+        id: '2',
+        title: 'レビュー対応',
+        userId: '1',
+        startDate: formatDateStr(addDays(today, 6)),
+        endDate: formatDateStr(addDays(today, 8)),
+        color: '#3b82f6'
+      },
+      {
+        id: '3',
+        title: 'バグ修正',
+        userId: '2',
+        startDate: formatDateStr(addDays(today, 0)),
+        endDate: formatDateStr(addDays(today, 3)),
+        color: '#10b981'
+      },
+      {
+        id: '4',
+        title: 'テスト実施',
+        userId: '2',
+        startDate: formatDateStr(addDays(today, 1)),
+        endDate: formatDateStr(addDays(today, 6)),
+        color: '#10b981'
+      },
+      {
+        id: '5',
+        title: 'ドキュメント作成',
+        userId: '2',
+        startDate: formatDateStr(addDays(today, 4)),
+        endDate: formatDateStr(addDays(today, 7)),
+        color: '#10b981'
+      },
+      {
+        id: '6',
+        title: '要件定義',
+        userId: '3',
+        startDate: formatDateStr(addDays(today, 10)),
+        endDate: formatDateStr(addDays(today, 12)),
+        color: '#f59e0b'
+      },
+      {
+        id: '7',
+        title: 'プロジェクトB実装',
+        userId: '4',
+        startDate: formatDateStr(addDays(today, -3)),
+        endDate: formatDateStr(addDays(today, 4)),
+        color: '#ef4444'
+      },
+      {
+        id: '8',
+        title: 'プロジェクトC実装',
+        userId: '4',
+        startDate: formatDateStr(addDays(today, 5)),
+        endDate: formatDateStr(addDays(today, 11)),
+        color: '#ef4444'
+      }
+    ];
+
+    // Utility Functions
+    const getDateRange = (startDate, days) => {
+      const dates = [];
+      for (let i = 0; i < days; i++) {
+        const date = new Date(startDate);
+        date.setDate(startDate.getDate() + i);
+        dates.push(date);
+      }
+      return dates;
+    };
+
+    const formatDate = (date, format = 'short') => {
+      if (format === 'long') {
+        const year = date.getFullYear();
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const day = date.getDate().toString().padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+      
+      const month = date.getMonth() + 1;
+      const day = date.getDate();
+      return `${month}/${day}`;
+    };
+
+    const getDaysBetween = (start, end) => {
+      const startDate = new Date(start);
+      const endDate = new Date(end);
+      const diffTime = endDate.getTime() - startDate.getTime();
+      return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    };
+
+    const isToday = (date) => {
+      const today = new Date();
+      return date.getFullYear() === today.getFullYear() &&
+             date.getMonth() === today.getMonth() &&
+             date.getDate() === today.getDate();
+    };
+
+    const isWeekend = (date) => {
+      const day = date.getDay();
+      return day === 0 || day === 6;
+    };
+
+    const getWeekday = (date) => {
+      const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
+      return weekdays[date.getDay()];
+    };
+
+    const detectOverlap = (tasks) => {
+      for (let i = 0; i < tasks.length; i++) {
+        for (let j = i + 1; j < tasks.length; j++) {
+          const task1 = tasks[i];
+          const task2 = tasks[j];
+          
+          if (
+            (task1.startDate <= task2.endDate && task1.endDate >= task2.startDate)
+          ) {
+            return true;
+          }
+        }
+      }
+      return false;
+    };
+
+    const calculateWorkload = (userId, tasks, startDate, endDate) => {
+      const userTasks = tasks.filter(task => task.userId === userId);
+      
+      const rangeStart = formatDate(startDate, 'long');
+      const rangeEnd = formatDate(endDate, 'long');
+      const totalDays = getDaysBetween(rangeStart, rangeEnd);
+      
+      let workDays = 0;
+      const hasOverlap = detectOverlap(userTasks);
+      
+      userTasks.forEach(task => {
+        const taskStart = task.startDate > rangeStart ? task.startDate : rangeStart;
+        const taskEnd = task.endDate < rangeEnd ? task.endDate : rangeEnd;
+        
+        if (taskStart <= taskEnd) {
+          workDays += getDaysBetween(taskStart, taskEnd);
+        }
+      });
+      
+      const utilization = Math.min(100, Math.round((workDays / totalDays) * 100));
+      
+      return {
+        userId,
+        utilization,
+        taskCount: userTasks.length,
+        hasOverlap
+      };
+    };
+
+    const getTaskPosition = (task, startDate, dayWidth) => {
+      const timelineStart = formatDate(startDate, 'long');
+      const taskStartDate = new Date(task.startDate);
+      const taskEndDate = new Date(task.endDate);
+      const timelineStartDate = new Date(timelineStart);
+      
+      const daysFromStart = Math.max(0, Math.floor((taskStartDate.getTime() - timelineStartDate.getTime()) / (1000 * 60 * 60 * 24)));
+      const taskDuration = getDaysBetween(task.startDate, task.endDate);
+      
+      return {
+        left: daysFromStart * dayWidth,
+        width: taskDuration * dayWidth
+      };
+    };
+
+    // Components
+    const TimelineHeader = ({ dates, dayWidth }) => {
+      return React.createElement('div', {
+        style: {
+          display: 'flex',
+          position: 'sticky',
+          top: 0,
+          zIndex: 20,
+          backgroundColor: '#111827',
+          borderBottom: '2px solid #374151'
+        }
+      }, [
+        React.createElement('div', {
+          key: 'header-label',
+          style: {
+            width: '200px',
+            minWidth: '200px',
+            padding: '12px 16px',
+            fontWeight: 'bold',
+            color: '#f3f4f6',
+            borderRight: '1px solid #374151'
+          }
+        }, 'ユーザー'),
+        React.createElement('div', {
+          key: 'header-dates',
+          style: { display: 'flex', flex: 1 }
+        }, dates.map((date, index) => {
+          const isTodayDate = isToday(date);
+          const isWeekendDate = isWeekend(date);
+          
+          return React.createElement('div', {
+            key: index,
+            style: {
+              width: `${dayWidth}px`,
+              minWidth: `${dayWidth}px`,
+              padding: '12px 4px',
+              textAlign: 'center',
+              fontSize: '12px',
+              fontWeight: isTodayDate ? 'bold' : 'normal',
+              color: isTodayDate ? '#fbbf24' : isWeekendDate ? '#9ca3af' : '#f3f4f6',
+              backgroundColor: isTodayDate ? '#1f2937' : 'transparent',
+              borderRight: '1px solid #374151'
+            }
+          }, [
+            React.createElement('div', { key: 'date' }, formatDate(date)),
+            React.createElement('div', { 
+              key: 'weekday',
+              style: { fontSize: '10px', marginTop: '2px' }
+            }, getWeekday(date))
+          ]);
+        }))
+      ]);
+    };
+
+    const TaskBlock = ({ task, left, width, top, onClick }) => {
+      const [isHovered, setIsHovered] = useState(false);
+
+      return React.createElement(React.Fragment, null, [
+        React.createElement('div', {
+          key: 'block',
+          onClick: () => onClick(task),
+          onMouseEnter: () => setIsHovered(true),
+          onMouseLeave: () => setIsHovered(false),
+          style: {
+            position: 'absolute',
+            left: `${left}px`,
+            top: `${top}px`,
+            width: `${width - 4}px`,
+            height: '32px',
+            backgroundColor: task.color || '#3b82f6',
+            borderRadius: '4px',
+            padding: '4px 8px',
+            cursor: 'pointer',
+            overflow: 'hidden',
+            whiteSpace: 'nowrap',
+            textOverflow: 'ellipsis',
+            fontSize: '12px',
+            color: 'white',
+            fontWeight: '500',
+            boxShadow: isHovered ? '0 4px 6px rgba(0, 0, 0, 0.3)' : '0 1px 3px rgba(0, 0, 0, 0.2)',
+            transform: isHovered ? 'translateY(-2px)' : 'translateY(0)',
+            transition: 'all 0.2s ease',
+            zIndex: isHovered ? 15 : 10
+          }
+        }, task.title),
+        isHovered && React.createElement('div', {
+          key: 'tooltip',
+          style: {
+            position: 'fixed',
+            left: `${left + 10}px`,
+            top: `${top + 40}px`,
+            backgroundColor: '#1f2937',
+            color: '#f3f4f6',
+            padding: '8px 12px',
+            borderRadius: '6px',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
+            zIndex: 50,
+            fontSize: '12px',
+            pointerEvents: 'none',
+            maxWidth: '250px'
+          }
+        }, [
+          React.createElement('div', {
+            key: 'title',
+            style: { fontWeight: 'bold', marginBottom: '4px' }
+          }, task.title),
+          React.createElement('div', { key: 'start' }, `開始: ${task.startDate}`),
+          React.createElement('div', { key: 'end' }, `終了: ${task.endDate}`)
+        ])
+      ]);
+    };
+
+    const UserRow = ({ user, tasks, workload, dates, dayWidth, onTaskClick, onEmptyClick }) => {
+      const userTasks = tasks.filter(task => task.userId === user.id);
+      
+      const getUtilizationColor = (utilization) => {
+        if (utilization <= 50) return '#10b981';
+        if (utilization <= 80) return '#f59e0b';
+        return '#ef4444';
+      };
+
+      const sortedTasks = [...userTasks].sort((a, b) => {
+        return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
+      });
+
+      const taskLanes = [];
+      sortedTasks.forEach(task => {
+        let placed = false;
+        for (let lane of taskLanes) {
+          const hasConflict = lane.some(existingTask => {
+            return task.startDate <= existingTask.endDate && task.endDate >= existingTask.startDate;
+          });
+          if (!hasConflict) {
+            lane.push(task);
+            placed = true;
+            break;
+          }
+        }
+        if (!placed) {
+          taskLanes.push([task]);
+        }
+      });
+
+      const rowHeight = Math.max(60, taskLanes.length * 40 + 20);
+
+      return React.createElement('div', {
+        style: {
+          display: 'flex',
+          borderBottom: '1px solid #e5e7eb',
+          minHeight: `${rowHeight}px`
+        }
+      }, [
+        React.createElement('div', {
+          key: 'user-info',
+          style: {
+            width: '200px',
+            minWidth: '200px',
+            padding: '12px 16px',
+            borderRight: '1px solid #e5e7eb',
+            backgroundColor: '#ffffff'
+          }
+        }, [
+          React.createElement('div', {
+            key: 'name-row',
+            style: {
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              marginBottom: '8px'
+            }
+          }, [
+            React.createElement('div', {
+              key: 'color',
+              style: {
+                width: '12px',
+                height: '12px',
+                borderRadius: '50%',
+                backgroundColor: user.color
+              }
+            }),
+            React.createElement('span', {
+              key: 'name',
+              style: { fontWeight: '600', fontSize: '14px' }
+            }, user.name)
+          ]),
+          React.createElement('div', {
+            key: 'stats',
+            style: { fontSize: '12px', color: '#6b7280' }
+          }, [
+            React.createElement('div', {
+              key: 'utilization',
+              style: { display: 'flex', alignItems: 'center', gap: '4px' }
+            }, [
+              React.createElement('span', { key: 'label' }, '稼働率:'),
+              React.createElement('span', {
+                key: 'value',
+                style: {
+                  fontWeight: 'bold',
+                  color: getUtilizationColor(workload.utilization)
+                }
+              }, `${workload.utilization}%`),
+              workload.hasOverlap && React.createElement('span', { key: 'warning' }, '⚠️')
+            ]),
+            React.createElement('div', { key: 'tasks' }, `タスク数: ${workload.taskCount}`)
+          ])
+        ]),
+        React.createElement('div', {
+          key: 'timeline',
+          style: {
+            flex: 1,
+            position: 'relative',
+            display: 'flex'
+          }
+        }, [
+          ...dates.map((date, index) => 
+            React.createElement('div', {
+              key: `date-${index}`,
+              onClick: () => onEmptyClick(user.id, date),
+              onMouseEnter: (e) => {
+                e.currentTarget.style.backgroundColor = '#f3f4f6';
+              },
+              onMouseLeave: (e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              },
+              style: {
+                width: `${dayWidth}px`,
+                minWidth: `${dayWidth}px`,
+                borderRight: '1px solid #e5e7eb',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s'
+              }
+            })
+          ),
+          ...taskLanes.flatMap((lane, laneIndex) => 
+            lane.map(task => {
+              const position = getTaskPosition(task, dates[0], dayWidth);
+              return React.createElement(TaskBlock, {
+                key: task.id,
+                task,
+                left: position.left,
+                width: position.width,
+                top: laneIndex * 40 + 10,
+                onClick: onTaskClick
+              });
+            })
+          )
+        ])
+      ]);
+    };
+
+    const AddTaskModal = ({ isOpen, onClose, onAdd, users, prefillUserId, prefillDate }) => {
+      const [title, setTitle] = useState('');
+      const [userId, setUserId] = useState('');
+      const [startDate, setStartDate] = useState('');
+      const [endDate, setEndDate] = useState('');
+
+      useEffect(() => {
+        if (isOpen) {
+          if (prefillUserId) {
+            setUserId(prefillUserId);
+          }
+          if (prefillDate) {
+            const dateStr = formatDate(prefillDate, 'long');
+            setStartDate(dateStr);
+            setEndDate(dateStr);
+          }
+        }
+      }, [isOpen, prefillUserId, prefillDate]);
+
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        if (title && userId && startDate && endDate) {
+          const selectedUser = users.find(u => u.id === userId);
+          onAdd({
+            title,
+            userId,
+            startDate,
+            endDate,
+            color: selectedUser?.color
+          });
+          setTitle('');
+          setUserId('');
+          setStartDate('');
+          setEndDate('');
+          onClose();
+        }
+      };
+
+      if (!isOpen) return null;
+
+      return React.createElement('div', {
+        style: {
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 100
+        },
+        onClick: onClose
+      }, 
+        React.createElement('div', {
+          onClick: (e) => e.stopPropagation(),
+          style: {
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            padding: '24px',
+            width: '400px',
+            maxWidth: '90%',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3)'
+          }
+        }, [
+          React.createElement('h2', {
+            key: 'title',
+            style: { margin: '0 0 20px 0', fontSize: '20px', fontWeight: 'bold' }
+          }, 'タスク追加'),
+          React.createElement('form', {
+            key: 'form',
+            onSubmit: handleSubmit
+          }, [
+            React.createElement('div', {
+              key: 'title-field',
+              style: { marginBottom: '16px' }
+            }, [
+              React.createElement('label', {
+                key: 'label',
+                style: { display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '500' }
+              }, 'タスク名'),
+              React.createElement('input', {
+                key: 'input',
+                type: 'text',
+                value: title,
+                onChange: (e) => setTitle(e.target.value),
+                required: true,
+                style: {
+                  width: '100%',
+                  padding: '8px 12px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '4px',
+                  fontSize: '14px'
+                }
+              })
+            ]),
+            React.createElement('div', {
+              key: 'user-field',
+              style: { marginBottom: '16px' }
+            }, [
+              React.createElement('label', {
+                key: 'label',
+                style: { display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '500' }
+              }, '担当者'),
+              React.createElement('select', {
+                key: 'select',
+                value: userId,
+                onChange: (e) => setUserId(e.target.value),
+                required: true,
+                style: {
+                  width: '100%',
+                  padding: '8px 12px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '4px',
+                  fontSize: '14px'
+                }
+              }, [
+                React.createElement('option', { key: 'empty', value: '' }, '選択してください'),
+                ...users.map(user => 
+                  React.createElement('option', { key: user.id, value: user.id }, user.name)
+                )
+              ])
+            ]),
+            React.createElement('div', {
+              key: 'start-field',
+              style: { marginBottom: '16px' }
+            }, [
+              React.createElement('label', {
+                key: 'label',
+                style: { display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '500' }
+              }, '開始日'),
+              React.createElement('input', {
+                key: 'input',
+                type: 'date',
+                value: startDate,
+                onChange: (e) => setStartDate(e.target.value),
+                required: true,
+                style: {
+                  width: '100%',
+                  padding: '8px 12px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '4px',
+                  fontSize: '14px'
+                }
+              })
+            ]),
+            React.createElement('div', {
+              key: 'end-field',
+              style: { marginBottom: '20px' }
+            }, [
+              React.createElement('label', {
+                key: 'label',
+                style: { display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '500' }
+              }, '終了日'),
+              React.createElement('input', {
+                key: 'input',
+                type: 'date',
+                value: endDate,
+                onChange: (e) => setEndDate(e.target.value),
+                required: true,
+                style: {
+                  width: '100%',
+                  padding: '8px 12px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '4px',
+                  fontSize: '14px'
+                }
+              })
+            ]),
+            React.createElement('div', {
+              key: 'buttons',
+              style: { display: 'flex', gap: '12px', justifyContent: 'flex-end' }
+            }, [
+              React.createElement('button', {
+                key: 'cancel',
+                type: 'button',
+                onClick: onClose,
+                style: {
+                  padding: '8px 16px',
+                  borderRadius: '4px',
+                  border: '1px solid #d1d5db',
+                  backgroundColor: 'white',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }
+              }, 'キャンセル'),
+              React.createElement('button', {
+                key: 'submit',
+                type: 'submit',
+                style: {
+                  padding: '8px 16px',
+                  borderRadius: '4px',
+                  border: 'none',
+                  backgroundColor: '#3b82f6',
+                  color: 'white',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500'
+                }
+              }, '追加')
+            ])
+          ])
+        ])
+      );
+    };
+
+    // Main App
+    const App = () => {
+      const [tasks, setTasks] = useState(initialTasks);
+      const [viewMode, setViewMode] = useState('week');
+      const [isModalOpen, setIsModalOpen] = useState(false);
+      const [prefillUserId, setPrefillUserId] = useState(undefined);
+      const [prefillDate, setPrefillDate] = useState(undefined);
+      const [selectedTask, setSelectedTask] = useState(null);
+
+      const getViewDays = () => {
+        switch (viewMode) {
+          case 'week': return 14;
+          case 'month': return 30;
+          case 'quarter': return 90;
+          default: return 14;
+        }
+      };
+
+      const today = new Date();
+      const startDate = new Date(today);
+      startDate.setDate(startDate.getDate() - 3);
+      
+      const dates = getDateRange(startDate, getViewDays());
+      const dayWidth = 60;
+
+      const handleAddTask = (newTask) => {
+        const id = (Math.max(...tasks.map(t => parseInt(t.id)), 0) + 1).toString();
+        setTasks([...tasks, { ...newTask, id }]);
+      };
+
+      const handleTaskClick = (task) => {
+        setSelectedTask(task);
+      };
+
+      const handleEmptyClick = (userId, date) => {
+        setPrefillUserId(userId);
+        setPrefillDate(date);
+        setIsModalOpen(true);
+      };
+
+      const handleDeleteTask = () => {
+        if (selectedTask) {
+          setTasks(tasks.filter(t => t.id !== selectedTask.id));
+          setSelectedTask(null);
+        }
+      };
+
+      const handleCloseTaskDetail = () => {
+        setSelectedTask(null);
+      };
+
+      const endDate = dates[dates.length - 1];
+
+      return React.createElement('div', {
+        style: {
+          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+          height: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden'
+        }
+      }, [
+        React.createElement('div', {
+          key: 'header',
+          style: {
+            backgroundColor: '#111827',
+            color: 'white',
+            padding: '16px 24px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            borderBottom: '2px solid #374151'
+          }
+        }, [
+          React.createElement('h1', {
+            key: 'title',
+            style: { margin: 0, fontSize: '24px', fontWeight: 'bold' }
+          }, 'リソーススケジューラー'),
+          React.createElement('div', {
+            key: 'controls',
+            style: { display: 'flex', gap: '12px', alignItems: 'center' }
+          }, [
+            React.createElement('div', {
+              key: 'view-modes',
+              style: { display: 'flex', gap: '4px', backgroundColor: '#1f2937', borderRadius: '6px', padding: '4px' }
+            }, ['week', 'month', 'quarter'].map(mode => 
+              React.createElement('button', {
+                key: mode,
+                onClick: () => setViewMode(mode),
+                style: {
+                  padding: '6px 12px',
+                  border: 'none',
+                  borderRadius: '4px',
+                  backgroundColor: viewMode === mode ? '#3b82f6' : 'transparent',
+                  color: 'white',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  transition: 'background-color 0.2s'
+                }
+              }, mode === 'week' ? '2週間' : mode === 'month' ? '1ヶ月' : '3ヶ月')
+            )),
+            React.createElement('button', {
+              key: 'add-task',
+              onClick: () => {
+                setPrefillUserId(undefined);
+                setPrefillDate(undefined);
+                setIsModalOpen(true);
+              },
+              onMouseEnter: (e) => {
+                e.currentTarget.style.backgroundColor = '#2563eb';
+              },
+              onMouseLeave: (e) => {
+                e.currentTarget.style.backgroundColor = '#3b82f6';
+              },
+              style: {
+                padding: '8px 16px',
+                borderRadius: '6px',
+                border: 'none',
+                backgroundColor: '#3b82f6',
+                color: 'white',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '600',
+                transition: 'background-color 0.2s'
+              }
+            }, '+ タスク追加')
+          ])
+        ]),
+        React.createElement('div', {
+          key: 'content',
+          style: {
+            flex: 1,
+            overflow: 'auto',
+            backgroundColor: '#f9fafb'
+          }
+        }, [
+          React.createElement(TimelineHeader, {
+            key: 'timeline-header',
+            dates,
+            dayWidth
+          }),
+          ...users.map(user => {
+            const workload = calculateWorkload(user.id, tasks, startDate, endDate);
+            return React.createElement(UserRow, {
+              key: user.id,
+              user,
+              tasks,
+              workload,
+              dates,
+              dayWidth,
+              onTaskClick: handleTaskClick,
+              onEmptyClick: handleEmptyClick
+            });
+          })
+        ]),
+        React.createElement(AddTaskModal, {
+          key: 'modal',
+          isOpen: isModalOpen,
+          onClose: () => {
+            setIsModalOpen(false);
+            setPrefillUserId(undefined);
+            setPrefillDate(undefined);
+          },
+          onAdd: handleAddTask,
+          users,
+          prefillUserId,
+          prefillDate
+        }),
+        selectedTask && React.createElement('div', {
+          key: 'task-detail',
+          style: {
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100
+          },
+          onClick: handleCloseTaskDetail
+        }, 
+          React.createElement('div', {
+            onClick: (e) => e.stopPropagation(),
+            style: {
+              backgroundColor: 'white',
+              borderRadius: '8px',
+              padding: '24px',
+              width: '400px',
+              maxWidth: '90%',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3)'
+            }
+          }, [
+            React.createElement('h2', {
+              key: 'title',
+              style: { margin: '0 0 20px 0', fontSize: '20px', fontWeight: 'bold' }
+            }, 'タスク詳細'),
+            React.createElement('div', {
+              key: 'task-title',
+              style: { marginBottom: '16px' }
+            }, [
+              React.createElement('div', {
+                key: 'label',
+                style: { fontSize: '14px', color: '#6b7280', marginBottom: '4px' }
+              }, 'タスク名'),
+              React.createElement('div', {
+                key: 'value',
+                style: { fontSize: '16px', fontWeight: '600' }
+              }, selectedTask.title)
+            ]),
+            React.createElement('div', {
+              key: 'assignee',
+              style: { marginBottom: '16px' }
+            }, [
+              React.createElement('div', {
+                key: 'label',
+                style: { fontSize: '14px', color: '#6b7280', marginBottom: '4px' }
+              }, '担当者'),
+              React.createElement('div', {
+                key: 'value',
+                style: { fontSize: '16px', fontWeight: '600' }
+              }, users.find(u => u.id === selectedTask.userId)?.name)
+            ]),
+            React.createElement('div', {
+              key: 'period',
+              style: { marginBottom: '16px' }
+            }, [
+              React.createElement('div', {
+                key: 'label',
+                style: { fontSize: '14px', color: '#6b7280', marginBottom: '4px' }
+              }, '期間'),
+              React.createElement('div', {
+                key: 'value',
+                style: { fontSize: '16px' }
+              }, `${selectedTask.startDate} 〜 ${selectedTask.endDate}`)
+            ]),
+            React.createElement('div', {
+              key: 'buttons',
+              style: { display: 'flex', gap: '12px', justifyContent: 'flex-end' }
+            }, [
+              React.createElement('button', {
+                key: 'delete',
+                onClick: handleDeleteTask,
+                style: {
+                  padding: '8px 16px',
+                  borderRadius: '4px',
+                  border: 'none',
+                  backgroundColor: '#ef4444',
+                  color: 'white',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500'
+                }
+              }, '削除'),
+              React.createElement('button', {
+                key: 'close',
+                onClick: handleCloseTaskDetail,
+                style: {
+                  padding: '8px 16px',
+                  borderRadius: '4px',
+                  border: '1px solid #d1d5db',
+                  backgroundColor: 'white',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }
+              }, '閉じる')
+            ])
+          ])
+        )
+      ]);
+    };
+
+    const root = createRoot(document.getElementById('root'));
     root.render(React.createElement(App));
   </script>
 </body>
