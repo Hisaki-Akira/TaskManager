@@ -928,9 +928,10 @@
         
         try {
           const user = users.find(u => u.id === newTask.userId);
+          // Map component userId to Firestore assignedTo field
           await addDoc(collection(db, 'tasks'), {
             title: newTask.title,
-            assignedTo: newTask.userId,
+            assignedTo: newTask.userId,  // userId from form becomes assignedTo in Firestore
             createdBy: currentUser.uid,
             startDate: newTask.startDate,
             endDate: newTask.endDate,
@@ -1006,10 +1007,11 @@
       const endDate = dates[dates.length - 1];
 
       // Transform Firestore tasks to match component format
+      // Maps assignedTo (Firestore) back to userId (component)
       const displayTasks = tasks.map(task => ({
         id: task.id,
         title: task.title,
-        userId: task.assignedTo,
+        userId: task.assignedTo,  // assignedTo from Firestore becomes userId for components
         startDate: task.startDate,
         endDate: task.endDate,
         color: task.color
