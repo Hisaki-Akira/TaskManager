@@ -1,7 +1,7 @@
 import React from 'react';
 import { User, Task, UserWorkload } from '../types';
 import { TaskBlock } from './TaskBlock';
-import { getTaskPosition, detectOverlap } from '../utils/workloadUtils';
+import { getTaskPosition } from '../utils/workloadUtils';
 
 interface UserRowProps {
   user: User;

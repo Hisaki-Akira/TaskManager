@@ -161,7 +161,7 @@
       const startDate = new Date(start);
       const endDate = new Date(end);
       const diffTime = endDate.getTime() - startDate.getTime();
-      return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+      return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
     };
 
     const isToday = (date) => {
@@ -724,7 +724,7 @@
       const dayWidth = 60;
 
       const handleAddTask = (newTask) => {
-        const id = (Math.max(...tasks.map(t => parseInt(t.id)), 0) + 1).toString();
+        const id = tasks.length === 0 ? '1' : (Math.max(...tasks.map(t => parseInt(t.id) || 0)) + 1).toString();
         setTasks([...tasks, { ...newTask, id }]);
       };
 

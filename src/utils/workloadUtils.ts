@@ -17,6 +17,15 @@ export const calculateWorkload = (
   const rangeEnd = formatDate(endDate);
   const totalDays = getDaysBetween(rangeStart, rangeEnd);
   
+  if (totalDays === 0) {
+    return {
+      userId,
+      utilization: 0,
+      taskCount: userTasks.length,
+      hasOverlap: detectOverlap(userTasks)
+    };
+  }
+  
   let workDays = 0;
   const hasOverlap = detectOverlap(userTasks);
   

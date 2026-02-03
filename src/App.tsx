@@ -32,7 +32,7 @@ const App: React.FC = () => {
   const dayWidth = 60;
 
   const handleAddTask = (newTask: Omit<Task, 'id'>) => {
-    const id = (Math.max(...tasks.map(t => parseInt(t.id)), 0) + 1).toString();
+    const id = tasks.length === 0 ? '1' : (Math.max(...tasks.map(t => parseInt(t.id) || 0)) + 1).toString();
     setTasks([...tasks, { ...newTask, id }]);
   };
 

@@ -27,7 +27,7 @@ export const getDaysBetween = (start: string, end: string): number => {
   const startDate = new Date(start);
   const endDate = new Date(end);
   const diffTime = endDate.getTime() - startDate.getTime();
-  return Math.ceil(diffTime / MS_PER_DAY) + 1;
+  return Math.floor(diffTime / MS_PER_DAY) + 1;
 };
 
 export const isToday = (date: Date): boolean => {
